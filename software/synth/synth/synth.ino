@@ -28,7 +28,12 @@ AudioControlSGTL5000     sgtl5000_1;     //xy=394,544
 
 int incomingByte = 0;   // for incoming serial data
 float notes[12] = {523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1174.66, 1318.51, 1567.98, 1760.00, 2093.00, 2349.32};
-float cutoff = 4000.0;
+float cutoff = 10000.0;
+
+int nextstate = 0;
+int readstate = 0;
+int keydown = 0;
+float note = 440.0;
 
 void setup() {
   Serial.begin(115200);
@@ -54,13 +59,28 @@ void loop() {
     // say what you got:
     Serial.print("I received: ");
     Serial.println(incomingByte, DEC);
-    if (incomingByte >= 49 && incomingByte < 58) {
-      waveform1.frequency(notes[incomingByte - 49]);
-      envelope1.noteOn();
+    if (incomingByte == '\n') {
+      nextstate = 0;
+      if (keydown) {
+        Serial.println("Bang");
+        waveform1.frequency(note);
+        envelope1.noteOn();
+      } else {
+        Serial.println("Off");
+        envelope1.noteOff();
+      }
     }
-    else if (incomingByte == '0') {
-      envelope1.noteOff();
+    if (readstate == 1 && incomingByte >= 49 && incomingByte < 58) {
+      note = notes[incomingByte - 49];
+      nextstate = 2;
     }
+    else if (readstate == 0) {
+      keydown = incomingByte == '1';
+      Serial.println(keydown, DEC);
+      nextstate = 1;
+    }
+    readstate = nextstate;
+    /*
     if (incomingByte == '=') {
       cutoff *= 1.5;
       filter1.frequency(cutoff);
@@ -68,5 +88,6 @@ void loop() {
       cutoff /= 1.5;
       filter1.frequency(cutoff);
     }
+    */
   }
 }
